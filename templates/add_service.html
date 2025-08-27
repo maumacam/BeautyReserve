@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+<!-- ↑↑↑ THIS LINE IS CRUCIAL: It tells Flask to use your base.html as the template ↑↑↑ -->
+
+{% block title %}Add Service - NailBooker{% endblock %}
+<!-- ↑↑↑ This sets the page title that will show in the browser tab ↑↑↑ -->
+
+{% block content %}
+<!-- ↑↑↑ This is where your unique page content begins ↑↑↑ -->
+<div class="container mt-5">
+    <h2>Add New Service</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="name" class="form-label">Service Name</label>
+            <input type="text" class="form-control" name="name" required>
+        </div>
+        <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea class="form-control" name="description" required></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="price" class="form-label">Price</label>
+            <input type="number" class="form-control" name="price" step="0.01" required>
+        </div>
+        <div class="mb-3">
+            <label for="image" class="form-label">Service Image</label>
+            <input type="file" class="form-control" name="image" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Add Service</button>
+        <a href="/dashboard" class="btn btn-secondary">Back</a>
+    </form>
+</div>
+{% endblock %}
+<!-- ↑↑↑ This ends your unique content block ↑↑↑ -->

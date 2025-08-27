@@ -1,0 +1,8 @@
+body {
+  background: #fff5f8;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+.card { border-radius: 14px; overflow: hidden; }
+.btn-primary { background:#d63384; border-color:#d63384; }
+.btn-primary:hover { background:#b52a6b; border-color:#b52a6b; }
+.navbar-brand { letter-spacing: .3px; }

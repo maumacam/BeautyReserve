@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Bookings</h2>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped align-middle">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Contact</th>
+          <th>Service</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Status</th>
+          <th style="width:160px">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bookings %}
+        <tr>
+          <td>{{ b[1] }}</td>
+          <td>{{ b[2] }}</td>
+          <td>{{ b[3] }}</td>
+          <td>{{ b[4] }}</td>
+          <td>{{ b[5] }}</td>
+          <td>
+            <span class="badge
+              {% if b[6]=='Pending' %} bg-warning
+              {% elif b[6]=='Approved' %} bg-success
+              {% else %} bg-danger
+              {% endif %}">
+              {{ b[6] }}
+            </span>
+          </td>
+          <td>
+            <a href="{{ url_for('approve', booking_id=b[0]) }}" class="btn btn-success btn-sm">Approve</a>
+            <a href="{{ url_for('cancel', booking_id=b[0]) }}" class="btn btn-danger btn-sm">Cancel</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="text-center text-muted">No bookings yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
