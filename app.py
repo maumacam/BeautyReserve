@@ -2,53 +2,65 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from config import get_db_connection
+from flask_mail import Mail, Message
 
 app = Flask(__name__)
 app.secret_key = "change-me-in-production"
 
-# ====== Hard-coded Nail Services for Homepage & Booking Select ======
+# ====== Email Configuration ======
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'your_email@gmail.com'   # Replace with your Gmail
+app.config['MAIL_PASSWORD'] = 'your_app_password'      # Use Gmail App Password
+app.config['MAIL_DEFAULT_SENDER'] = ('Nail Booker', 'your_email@gmail.com')
+
+mail = Mail(app)
+
+# ====== Services with multiple images for swipe feature ======
 SERVICES = [
     {
         "slug": "classic-french",
         "name": "Classic French",
         "price": 20.00,
         "desc": "Timeless French tips with a natural base.",
-        "image": "classic_french.jpg"
+        "images": ["acrylic_sculpt.jpg", "chrome_mirror.jpg", "gel_gloss.jpg"]
     },
     {
         "slug": "gel-gloss",
         "name": "Gel Gloss Manicure",
         "price": 28.00,
         "desc": "Long-lasting gel finish with high gloss.",
-        "image": "gel_gloss.jpg"
+        "images": ["minimalist_line.jpg", "classic_french.jpg"]
     },
     {
         "slug": "acrylic-sculpt",
         "name": "Acrylic Sculpt",
         "price": 35.00,
         "desc": "Durable acrylic extensions shaped to perfection.",
-        "image": "acrylic_sculpt.jpg"
+        "images": ["acrylic_sculpt.jpg", "chrome_mirror.jpg", "gel_gloss.jpg"]
     },
     {
         "slug": "minimalist-line",
         "name": "Minimalist Line Art",
         "price": 25.00,
         "desc": "Clean, modern line designs in your favorite colors.",
-        "image": "minimalist_line.jpg"
+        "images": ["minimalist_line.jpg", "classic_french.jpg"]
     },
     {
         "slug": "chrome-mirror",
         "name": "Chrome Mirror",
         "price": 32.00,
         "desc": "Eye-catching chrome finish for a bold look.",
-        "image": "chrome_mirror.jpg"
+        
     },
 ]
 
-# Map slug -> name for quick lookup in booking form
+
+# Quick lookup for booking
 SERVICE_NAME_BY_SLUG = {s["slug"]: s["name"] for s in SERVICES}
 
-# ====== Utility: protect routes ======
+# ====== Utility ======
 def admin_required():
     return ('admin_logged_in' in session) and (session['admin_logged_in'] is True)
 
@@ -67,14 +79,11 @@ def book():
         date_str = request.form.get("date")
         time_str = request.form.get("time")
 
-        # Basic validation
         if not all([name, contact, service_slug, date_str, time_str]):
             flash("Please fill out all fields.", "danger")
             return redirect(url_for("book"))
 
-        # Convert date/time
         try:
-            # (Also ensures valid values)
             _ = datetime.strptime(date_str, "%Y-%m-%d")
             _ = datetime.strptime(time_str, "%H:%M")
         except ValueError:
@@ -97,12 +106,39 @@ def book():
         cur.close()
         conn.close()
 
+        # ====== Send Email to Admin ======
+        try:
+            msg = Message("New Booking Received", recipients=["admin_email@gmail.com"])  # Change to real admin email
+            msg.body = f"""
+Hello Admin,
+
+You have a new booking:
+
+Name: {name}
+Contact: {contact}
+Service: {service_name}
+Date: {date_str}
+Time: {time_str}
+
+Please check your system for more details.
+"""
+            mail.send(msg)
+        except Exception as e:
+            print(f"Email sending failed: {e}")
+
         flash("Your appointment request has been submitted!", "success")
         return redirect(url_for("home"))
 
-    # GET -> show booking form
     return render_template("booking.html", services=SERVICES, title="Book Appointment")
 
+@app.route("/service/<slug>")
+def service_detail(slug):
+    service = next((s for s in SERVICES if s["slug"] == slug), None)
+    if not service:
+        return "Service not found", 404
+    return render_template("service_detail.html", service=service)
+
+# ====== Admin Dashboard ======
 @app.route("/dashboard")
 def dashboard():
     if not admin_required():
@@ -119,32 +155,6 @@ def dashboard():
     cur.close()
     conn.close()
     return render_template("dashboard.html", bookings=rows, title="Dashboard")
-
-@app.route("/approve/<int:booking_id>")
-def approve(booking_id):
-    if not admin_required():
-        return redirect(url_for("login"))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("UPDATE bookings SET status='Approved' WHERE id=%s", (booking_id,))
-    conn.commit()
-    cur.close()
-    conn.close()
-    flash("Booking approved.", "success")
-    return redirect(url_for("dashboard"))
-
-@app.route("/cancel/<int:booking_id>")
-def cancel(booking_id):
-    if not admin_required():
-        return redirect(url_for("login"))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("UPDATE bookings SET status='Cancelled' WHERE id=%s", (booking_id,))
-    conn.commit()
-    cur.close()
-    conn.close()
-    flash("Booking cancelled.", "warning")
-    return redirect(url_for("dashboard"))
 
 # ====== Auth ======
 @app.route("/login", methods=["GET", "POST"])
@@ -176,29 +186,6 @@ def logout():
     session.clear()
     flash("You have been logged out.", "info")
     return redirect(url_for("login"))
-
-# ====== One-time helper to seed an admin with hashed password ======
-# Visit /seed-admin once, then remove or protect it.
-@app.route("/seed-admin")
-def seed_admin():
-    # CHANGE THESE BEFORE USING IN REAL PROJECT
-    username = "admin"
-    password = "admin123"
-
-    hashed = generate_password_hash(password)
-    conn = get_db_connection()
-    cur = conn.cursor()
-    try:
-        cur.execute("INSERT INTO admins (username, password) VALUES (%s, %s)", (username, hashed))
-        conn.commit()
-        msg = "Admin user created."
-    except Exception as e:
-        msg = f"Error: {e}"
-    finally:
-        cur.close()
-        conn.close()
-
-    return msg
 
 if __name__ == "__main__":
     app.run(debug=True)
